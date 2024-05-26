@@ -11,7 +11,7 @@
     (if (> (vector-length args) 0)
         (with-handlers ([exn:fail:filesystem:errno? exn->user-error]
                         [exn:fail:filesystem? exn->user-error])
-          (open-input-file (vector-ref args 0) #:mode 'binary))
+          (open-input-file (vector-ref args 0) #:mode 'text))
         (raise-user-error 'anicca-subscribe "no subscription file provided"))))
 
 (define subscribe-packages
