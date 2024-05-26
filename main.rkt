@@ -57,4 +57,4 @@
                     (if assoc-res
                         (search (cons (entry->list assoc-res) acc) (cdr ps))
                         (search acc (cdr ps))))))])
-    (fmttable (search '() subscribe-packages))))
+    (fmttable (sort (search '() subscribe-packages) string<? #:key car))))
