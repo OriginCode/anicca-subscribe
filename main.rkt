@@ -22,11 +22,13 @@
 
 (define anicca-list
   (response-json
-   (let ([res (get
-               "https://raw.githubusercontent.com/AOSC-Dev/anicca/main/pkgsupdate.json")])
+   (let ([res
+          (get
+           "https://raw.githubusercontent.com/AOSC-Dev/anicca/main/pkgsupdate.json")])
      (if (= (response-status-code res) 200)
          res
-         (raise-user-error 'anicca-subscribe "failed to fetch anicca package update list")))))
+         (raise-user-error 'anicca-subscribe
+                           "failed to fetch anicca package update list")))))
 
 (define (hash-assoc v key hs)
   (if (null? hs)
@@ -48,13 +50,12 @@
                #:col-sep? '(#t #f ...)
                (cons '(Name Path Before After Warnings) res)))
 
-(define result
-  (letrec ([search
-            (λ (acc ps)
-              (if (null? ps)
-                  acc
-                  (let ([assoc-res (hash-assoc (car ps) 'name anicca-list)])
-                    (if assoc-res
-                        (search (cons (entry->list assoc-res) acc) (cdr ps))
-                        (search acc (cdr ps))))))])
-    (fmttable (sort (search '() subscribe-packages) string<? #:key car))))
+(define (search acc ps)
+  (if (null? ps)
+      acc
+      (let ([assoc-res (hash-assoc (car ps) 'name anicca-list)])
+        (if assoc-res
+            (search (cons (entry->list assoc-res) acc) (cdr ps))
+            (search acc (cdr ps))))))
+
+(fmttable (sort (search '() subscribe-packages) string<? #:key car))
