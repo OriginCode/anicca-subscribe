@@ -1,12 +1,15 @@
 PREFIX=/usr/local
 
-.PHONY: clean install-deps
+.PHONY: clean install uninstall install-deps
 
 anicca-subscribe: main.rkt
 	raco exe -o anicca-subscribe main.rkt
 
-install: all
+install: anicca-subscribe
 	install -Dvm755 ./anicca-subscribe $(PREFIX)/bin/anicca-subscribe
+
+uninstall:
+	rm -vf $(PREFIX)/bin/anicca-subscribe
 
 install-deps:
 	raco pkg install --skip-installed http-easy-lib text-table
