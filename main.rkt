@@ -1,22 +1,20 @@
 #lang racket
 
+(require racket/cmdline)
 (require net/http-easy)
 (require text-table)
 
 (define (exn->user-error e)
   (raise-user-error (exn-message e)))
 
-(define subscription-file
-  (let ([args (current-command-line-arguments)])
-    (if (> (vector-length args) 0)
-        (with-handlers ([exn:fail:filesystem:errno? exn->user-error]
-                        [exn:fail:filesystem? exn->user-error])
-          (open-input-file (vector-ref args 0) #:mode 'text))
-        (raise-user-error 'anicca-subscribe "no subscription file provided"))))
+(define (subscription-file path)
+  (with-handlers ([exn:fail:filesystem:errno? exn->user-error]
+                  [exn:fail:filesystem? exn->user-error])
+    (open-input-file path #:mode 'text)))
 
-(define subscribe-packages
+(define (subscribe-packages port)
   (letrec ([load (λ (acc)
-                   (let ([line (read-line subscription-file)])
+                   (let ([line (read-line port)])
                      (if (eof-object? line) acc (cons line (load acc)))))])
     (load '())))
 
@@ -50,12 +48,33 @@
                #:col-sep? '(#t #f ...)
                (cons '(Name Path Before After Warnings) res)))
 
-(define (search acc ps)
-  (if (null? ps)
-      acc
-      (let ([assoc-res (hash-assoc (car ps) 'name anicca-list)])
-        (if assoc-res
-            (search (cons (entry->list assoc-res) acc) (cdr ps))
-            (search acc (cdr ps))))))
+(define (search ps)
+  (letrec ([f (λ (acc ps)
+                (if (null? ps)
+                    acc
+                    (let ([assoc-res (hash-assoc (car ps) 'name anicca-list)])
+                      (if assoc-res
+                          (f (cons (entry->list assoc-res) acc) (cdr ps))
+                          (f acc (cdr ps))))))])
+    (f '() ps)))
 
-(fmttable (sort (search '() subscribe-packages) string<? #:key car))
+(define package-names (make-parameter null))
+
+(define (cli)
+  (command-line #:program "Anicca Subscribe"
+                #:once-any
+                [("-f" "--file")
+                 path
+                 "Use a subscription file"
+                 (package-names (subscribe-packages (subscription-file path)))]
+                [("-p" "--packages")
+                 packages
+                 "Use package names"
+                 (package-names (string-split packages ","))]))
+
+(cli)
+
+(let ([search-result (search (package-names))])
+  (if (null? search-result)
+      (exit)
+      (fmttable (sort (search (package-names)) string<? #:key car))))
