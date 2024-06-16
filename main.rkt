@@ -12,12 +12,6 @@
                   [exn:fail:filesystem? exn->user-error])
     (open-input-file path #:mode 'text)))
 
-(define (subscribe-packages port)
-  (letrec ([load (λ (acc)
-                   (let ([line (read-line port)])
-                     (if (eof-object? line) acc (cons line (load acc)))))])
-    (load '())))
-
 (define anicca-list
   (response-json
    (let ([res
@@ -66,7 +60,7 @@
                 [("-f" "--file")
                  path
                  "Use a subscription file"
-                 (package-names (subscribe-packages (subscription-file path)))]
+                 (package-names (port->lines (subscription-file path)))]
                 [("-p" "--packages")
                  packages
                  "Use package names"
