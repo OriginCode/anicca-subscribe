@@ -1,4 +1,4 @@
-# Build method
+# Build and Install
 
 ```sh
 make
