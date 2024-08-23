@@ -1,17 +1,29 @@
-#lang racket
+#lang typed/racket
 
-(require json)
-
+(: convert
+   :
+   (Listof (HashTable Symbol (U String (Listof String))))
+   ->
+   (Listof (Listof String)))
 (define (convert pkgsupdate)
-  (map (λ (pkg)
-         (list (hash-ref pkg 'name)
-               (car (string-split (hash-ref pkg 'path) "/"))
-               (hash-ref pkg 'before)
-               (hash-ref pkg 'after)
-               (let ([warnings (hash-ref pkg 'warnings)])
-                 (if (null? warnings)
-                   "N/A"
-                   (if (> (length warnings) 1) (cadr warnings) "N/A")))))
-       pkgsupdate))
+  (map
+   (λ ([pkg : (HashTable Symbol (U String (Listof String)))])
+     (match pkg
+       [(hash 'name name
+              'path path
+              'before before
+              'after after
+              'warnings warnings)
+        (cast (list name
+                    (if (string? path) (car (string-split path "/")) "N/A")
+                    before
+                    after
+                    (if (list? warnings)
+                        (if (null? warnings)
+                            "N/A"
+                            (if (> (length warnings) 1) (cadr warnings) "N/A"))
+                        "N/A"))
+              (Listof String))]))
+   pkgsupdate))
 
 (provide convert)
