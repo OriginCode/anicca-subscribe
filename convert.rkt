@@ -1,4 +1,7 @@
-#lang typed/racket
+#lang typed/racket/base
+
+(require racket/match
+         racket/string)
 
 (: convert
    :

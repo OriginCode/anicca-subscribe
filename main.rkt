@@ -1,6 +1,9 @@
-#lang racket
+#lang racket/base
 
-(require racket/cmdline)
+(require racket/cmdline
+         racket/contract
+         racket/port
+         racket/string)
 (require net/http-easy)
 (require text-table)
 (require json)
