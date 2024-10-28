@@ -4,7 +4,7 @@ PREFIX=/usr/local
 
 .PHONY: clean install uninstall install-deps
 
-anicca-subscribe: main.rkt
+anicca-subscribe: main.rkt install-deps
 ifeq ($(STATIC), 1)
 	raco exe --vv --orig-exe -o anicca-subscribe main.rkt
 else
