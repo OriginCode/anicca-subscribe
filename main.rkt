@@ -2,6 +2,7 @@
 
 (require racket/cmdline
          racket/contract
+         racket/list
          racket/port
          racket/string)
 (require net/http-easy)
@@ -48,6 +49,9 @@
 (define/contract local-data
   (parameter/c jsexpr?)
   (make-parameter #f))
+(define/contract roll?
+  (parameter/c boolean?)
+  (make-parameter #f))
 
 (define (cli)
   (command-line #:program "Anicca Subscribe"
@@ -64,7 +68,10 @@
                 [("-p" "--packages")
                  packages
                  "Use package names"
-                 (package-names (string-split packages ","))]))
+                 (package-names (string-split packages ","))]
+                [("-r" "--roll")
+                 "Roll 10 packages"
+                 (roll? #t)]))
 
 (cli)
 
@@ -72,7 +79,10 @@
   (listof (listof string?))
   (convert (if (local-data) (local-data) (online-data))))
 
-(let ([search-result (search (package-names) anicca-data)])
-  (if (null? search-result)
-      (exit)
-      (format-table (sort search-result string<? #:key car))))
+(if (roll?) 
+    (let ([roll-result (take (shuffle anicca-data) (min 10 (length anicca-data)))])
+      (format-table (sort roll-result string<? #:key car)))
+    (let ([search-result (search (package-names) anicca-data)])
+      (if (null? search-result)
+          (exit)
+          (format-table (sort search-result string<? #:key car)))))
