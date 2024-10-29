@@ -54,7 +54,7 @@
   (make-parameter #f))
 
 (define (cli)
-  (command-line #:program "Anicca Subscribe"
+  (command-line #:program "anicca-subscribe"
                 #:once-each
                 [("-l" "--local")
                  path
