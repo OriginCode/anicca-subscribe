@@ -14,5 +14,5 @@ anicca-subscribe -f <FILE_CONTAINING_LIST_OF_PACKAGES>
 Query package name(s):
 
 ```sh
-anicca-query -p <PACKAGE_NAME>[,...]
+anicca-subscribe -p <PACKAGE_NAME>[,...]
 ```
