@@ -79,7 +79,7 @@
   (listof (listof string?))
   (convert (if (local-data) (local-data) (online-data))))
 
-(if (roll?) 
+(if (roll?)
     (let ([roll-result (take (shuffle anicca-data) (min 10 (length anicca-data)))])
       (format-table (sort roll-result string<? #:key car)))
     (let ([search-result (search (package-names) anicca-data)])
