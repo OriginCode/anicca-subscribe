@@ -24,10 +24,9 @@
    (let ([res
           (get
            "https://raw.githubusercontent.com/AOSC-Dev/anicca/main/pkgsupdate.json")])
-     (if (= (response-status-code res) 200)
-         res
-         (raise-user-error 'anicca-subscribe
-                           "failed to fetch anicca package update list")))))
+     (unless (= (response-status-code res) 200)
+       (raise-user-error 'anicca-subscribe "failed to fetch anicca package update list"))
+     res)))
 
 (define/contract (format-table res)
   (-> (listof (listof string?)) void?)
@@ -38,8 +37,10 @@
 (define/contract (search ps anicca-data)
   (-> (listof string?) (listof (listof string?)) (listof (listof string?)))
   (foldl (lambda (p acc)
-           (let ([entry (assoc p anicca-data)])
-             (if entry (cons entry acc) acc)))
+           (define entry (assoc p anicca-data))
+           (if entry
+               (cons entry acc)
+               acc))
          '()
          ps))
 
@@ -79,10 +80,12 @@
   (listof (listof string?))
   (convert (if (local-data) (local-data) (online-data))))
 
-(if (roll?)
-    (let ([roll-result (take (shuffle anicca-data) (min 10 (length anicca-data)))])
-      (format-table (sort roll-result string<? #:key car)))
-    (let ([search-result (search (package-names) anicca-data)])
-      (if (null? search-result)
-          (exit)
-          (format-table (sort search-result string<? #:key car)))))
+(cond
+  [(roll?)
+   (define roll-result (take (shuffle anicca-data) (min 10 (length anicca-data))))
+   (format-table (sort roll-result string<? #:key car))]
+  [else
+   (define search-result (search (package-names) anicca-data))
+   (if (null? search-result)
+       (exit)
+       (format-table (sort search-result string<? #:key car)))])
