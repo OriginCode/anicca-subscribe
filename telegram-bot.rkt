@@ -73,10 +73,13 @@
               (if (null? anicca-res)
                   "No package subscribed."
                   (string-join (for/list ([package anicca-res])
-                                 (format "~a: ~a -> ~a"
+                                 (format "~a: ~a -> ~a ~a"
                                          (first package)
                                          (third package)
-                                         (fourth package)))
+                                         (fourth package)
+                                         (if (equal? "N/A" (fifth package))
+                                             ""
+                                             (format "(~a)" (fifth package)))))
                                "\n"))))
 
 (define/contract (handle-command update)
@@ -122,11 +125,11 @@
      (mainloop)]
     [else
      (define updates (hash-ref (response-json updates-res) 'result))
-     (if (null? updates)
-         (mainloop)
-         (begin
-           (for-each handle-update updates)
-           (mainloop (hash-ref (last updates) 'update_id))))]))
+     (cond
+       [(null? updates) (mainloop)]
+       [else
+        (for-each handle-update updates)
+        (mainloop (hash-ref (last updates) 'update_id))])]))
 
 (info (now) " Started")
 (mainloop 0)
