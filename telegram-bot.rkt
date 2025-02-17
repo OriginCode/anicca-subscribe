@@ -71,7 +71,7 @@
   (send-reply chat-id
               message-id
               (if (null? anicca-res)
-                  "No package subscribed."
+                  "No package update found."
                   (string-join (for/list ([package anicca-res])
                                  (format "~a: ~a -> ~a ~a"
                                          (first package)
@@ -81,6 +81,18 @@
                                              ""
                                              (format "(~a)" (fifth package)))))
                                "\n"))))
+
+(define/contract (get-subscribed-packages chat-id message-id user-id)
+  (-> integer? integer? integer? response?)
+  (define packages (get-packages user-id))
+  (send-reply chat-id
+              message-id
+              (if (null? packages)
+                  "No package subscribed."
+                  (format "Subscribed ~a package~a: ~a"
+                          (length packages)
+                          (if (> (length packages) 1) "s" "")
+                          (string-join packages ", ")))))
 
 (define/contract (handle-command update)
   (-> jsexpr? any/c)
@@ -96,12 +108,15 @@
                 user-id
                 (hash-ref message 'text)))
   (cond
+    [(string-prefix? command "/ping") (send-reply chat-id message-id "pong")]
     [(string-prefix? command "/subscribe")
      (subscribe chat-id message-id user-id (cdr args))]
     [(string-prefix? command "/unsubscribe")
      (unsubscribe chat-id message-id user-id (cdr args))]
     [(string-prefix? command "/updates")
-     (get-anicca chat-id message-id user-id)]))
+     (get-anicca chat-id message-id user-id)]
+    [(string-prefix? command "/list")
+     (get-subscribed-packages chat-id message-id user-id)]))
 
 (define (handle-update update)
   (when (hash-has-key? update 'message)
