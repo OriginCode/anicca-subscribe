@@ -10,6 +10,7 @@
 (require json)
 
 (require "convert.rkt")
+(require "lib.rkt")
 
 (define/contract (subscription-file path)
   (-> path-string? input-port?)
@@ -18,31 +19,11 @@
                     [exn:fail:filesystem? exn->user-error])
       (open-input-file path #:mode 'text))))
 
-(define/contract (online-data)
-  (-> jsexpr?)
-  (response-json
-   (let ([res
-          (get
-           "https://raw.githubusercontent.com/AOSC-Dev/anicca/main/pkgsupdate.json")])
-     (unless (= (response-status-code res) 200)
-       (raise-user-error 'anicca-subscribe "failed to fetch anicca package update list"))
-     res)))
-
 (define/contract (format-table res)
   (-> (listof (listof string?)) void?)
   (print-table #:row-sep? '(#t #f ...)
                #:col-sep? '(#t #f ...)
                (cons '(Name Category Before After Warnings) res)))
-
-(define/contract (search ps anicca-data)
-  (-> (listof string?) (listof (listof string?)) (listof (listof string?)))
-  (foldl (lambda (p acc)
-           (define entry (assoc p anicca-data))
-           (if entry
-               (cons entry acc)
-               acc))
-         '()
-         ps))
 
 (define/contract package-names
   (parameter/c (listof string?))
