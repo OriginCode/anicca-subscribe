@@ -22,8 +22,8 @@
   (kill-safe-connection (sqlite3-connect #:database "./subscription.db")))
 (define *local-anicca-file* "./anicca.json")
 
-(define/contract (info datetime text)
-  (-> datetime? string? void?)
+(define/contract (info text [datetime (now)])
+  (->* (string?) (datetime?) void?)
   (displayln (format "[~a]~a" (datetime->iso8601 datetime) text)))
 
 (define/contract (get-updates offset)
@@ -70,15 +70,15 @@
   (define local-anicca-data
     (with-handlers ([exn:fail:filesystem:errno?
                      (λ (e)
-                       (info (now) " Cannot read local data")
+                       (info " Cannot read local data")
                        eof)])
       (with-input-from-file *local-anicca-file* read-json)))
   (define anicca-data
     (cond
       [(eof-object? local-anicca-data)
-       (info (now) " Malformed local data, falling back to online data")
+       (info " Malformed local data, falling back to online data")
        (with-handlers ([exn:fail? (λ (e)
-                                    (info (now) " Cannot fetch online data")
+                                    (info " Cannot fetch online data")
                                     (list))])
          (online-data))]
       [else local-anicca-data]))
@@ -120,11 +120,11 @@
   (define chat-id (hash-ref (hash-ref message 'chat) 'id))
   (define message-id (hash-ref message 'message_id))
   (define user-id (hash-ref (hash-ref message 'from) 'id))
-  (info (posix->datetime (hash-ref message 'date))
-        (format "[CMD][CHAT ~a][USER ~a]: ~a"
+  (info (format "[CMD][CHAT ~a][USER ~a]: ~a"
                 chat-id
                 user-id
-                (hash-ref message 'text)))
+                (hash-ref message 'text))
+        (posix->datetime (hash-ref message 'date)))
   (cond
     [(string-prefix? command "/ping") (send-reply chat-id message-id "pong")]
     [(string-prefix? command "/subscribe")
@@ -145,26 +145,25 @@
           ""))
     (if (string-prefix? text "/")
         (handle-command update)
-        (info (posix->datetime (hash-ref message 'date))
-              (format "[TXT]: ~a" text)))))
+        (info (format "[TXT]: ~a" text)
+              (posix->datetime (hash-ref message 'date))))))
 
 (define local-anicca-file-update-worker
   (thread
    (λ ()
      (let loop ()
-       (info (now) " Fetching and saving pkgsupdate.json")
+       (info " Fetching and saving pkgsupdate.json")
        (define res (get *pkgsupdate-json-url*))
        (cond
          [(= (response-status-code res) 200)
           (with-output-to-file *local-anicca-file*
                                (λ () (write-bytes (response-body res)))
                                #:exists 'truncate)
-          (info (now) " Saved anicca.json")
+          (info " Saved anicca.json")
           (sleep (* 60 60)) ; 1 hour
           ]
          [else
-          (info (now)
-                (format " Failed to fetch pkgsupdate.json, status code ~a"
+          (info (format " Failed to fetch pkgsupdate.json, status code ~a"
                         (response-status-code res)))
           (sleep (* 5 60)) ; retry in 5 minutes
           ])
@@ -186,7 +185,7 @@
         (for-each handle-update updates)
         (mainloop (hash-ref (last updates) 'update_id))])]))
 
-(info (now) " Started")
+(info " Started")
 (mainloop 0)
 (kill-thread local-anicca-file-update-worker)
 (disconnect subscription-db)
