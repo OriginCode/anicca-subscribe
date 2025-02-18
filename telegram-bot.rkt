@@ -68,16 +68,22 @@
 (define/contract (get-anicca chat-id message-id user-id)
   (-> integer? integer? integer? response?)
   (define local-anicca-data
-    (with-input-from-file *local-anicca-file* read-json))
+    (with-handlers ([exn:fail:filesystem:errno?
+                     (λ (e)
+                       (info (now) " Cannot read local data")
+                       eof)])
+      (with-input-from-file *local-anicca-file* read-json)))
+  (define anicca-data
+    (cond
+      [(eof-object? local-anicca-data)
+       (info (now) " Malformed local data, falling back to online data")
+       (with-handlers ([exn:fail? (λ (e)
+                                    (info (now) " Cannot fetch online data")
+                                    (list))])
+         (online-data))]
+      [else local-anicca-data]))
   (define anicca-res
-    (sort (search
-           (get-packages user-id)
-           (convert
-            (cond
-              [(eof-object? local-anicca-data)
-               (info (now) " Cannot read local data, falling back to online data")
-               (online-data)]
-              [else local-anicca-data])))
+    (sort (search (get-packages user-id) (convert anicca-data))
           string<?
           #:key car))
   (send-reply chat-id
@@ -153,7 +159,7 @@
           (with-output-to-file *local-anicca-file*
                                (λ () (write-bytes (response-body res)))
                                #:exists 'truncate)
-          (info (now) " Saved pkgsupdate.json")
+          (info (now) " Saved anicca.json")
           (sleep (* 60 60)) ; 1 hour
           ]
          [else

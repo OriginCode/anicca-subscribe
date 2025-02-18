@@ -7,7 +7,7 @@
 (provide (all-defined-out))
 
 (define *pkgsupdate-json-url*
-  "https://raw.githubusercontent.com/AOSC-Dev/anicca/main/pkgsupdate.json")   
+  "https://raw.githubusercontent.com/AOSC-Dev/anicca/main/pkgsupdate.json")
 
 (define/contract (online-data)
   (-> jsexpr?)
@@ -16,7 +16,7 @@
           (get
            *pkgsupdate-json-url*)])
      (unless (= (response-status-code res) 200)
-       (raise-user-error 'anicca-subscribe "failed to fetch anicca package update list"))
+       (error 'anicca-subscribe "failed to fetch anicca package update list"))
      res)))
 
 (define/contract (search ps anicca-data)
