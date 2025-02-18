@@ -84,7 +84,7 @@
 
 (define/contract (get-subscribed-packages chat-id message-id user-id)
   (-> integer? integer? integer? response?)
-  (define packages (get-packages user-id))
+  (define packages (sort (get-packages user-id) string<?))
   (send-reply chat-id
               message-id
               (if (null? packages)
