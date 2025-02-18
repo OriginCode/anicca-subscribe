@@ -3,3 +3,4 @@ compiled/
 dist/
 anicca-subscribe
 subscription.db
+anicca.json

@@ -2,6 +2,7 @@
 
 (require racket/contract
          racket/list
+         racket/port
          racket/string)
 (require db)
 (require gregor)
@@ -17,7 +18,9 @@
 (define get-updates-url (string-append telegram-api-url "getUpdates"))
 (define send-message-url (string-append telegram-api-url "sendMessage"))
 
-(define subscription-db (sqlite3-connect #:database "./subscription.db"))
+(define subscription-db
+  (kill-safe-connection (sqlite3-connect #:database "./subscription.db")))
+(define *local-anicca-file* "./anicca.json")
 
 (define/contract (info datetime text)
   (-> datetime? string? void?)
@@ -64,8 +67,17 @@
 
 (define/contract (get-anicca chat-id message-id user-id)
   (-> integer? integer? integer? response?)
+  (define local-anicca-data
+    (with-input-from-file *local-anicca-file* read-json))
   (define anicca-res
-    (sort (search (get-packages user-id) (convert (online-data)))
+    (sort (search
+           (get-packages user-id)
+           (convert
+            (cond
+              [(eof-object? local-anicca-data)
+               (info (now) " Cannot read local data, falling back to online data")
+               (online-data)]
+              [else local-anicca-data])))
           string<?
           #:key car))
   (send-reply chat-id
@@ -130,13 +142,35 @@
         (info (posix->datetime (hash-ref message 'date))
               (format "[TXT]: ~a" text)))))
 
+(define local-anicca-file-update-worker
+  (thread
+   (λ ()
+     (let loop ()
+       (info (now) " Fetching and saving pkgsupdate.json")
+       (define res (get *pkgsupdate-json-url*))
+       (cond
+         [(= (response-status-code res) 200)
+          (with-output-to-file *local-anicca-file*
+                               (λ () (write-bytes (response-body res)))
+                               #:exists 'truncate)
+          (info (now) " Saved pkgsupdate.json")
+          (sleep (* 60 60)) ; 1 hour
+          ]
+         [else
+          (info (now)
+                (format " Failed to fetch pkgsupdate.json, status code ~a"
+                        (response-status-code res)))
+          (sleep (* 5 60)) ; retry in 5 minutes
+          ])
+       (loop)))))
+
 (define (mainloop [offset 0])
   (sleep 1)
   (define updates-res (get-updates (add1 offset)))
   (cond
     [(not (= 200 (response-status-code updates-res)))
-     (displayln (string-append "Cannot fetch updates, status code: "
-                               (response-status-code updates-res)))
+     (displayln (format "Cannot fetch updates, status code: ~a"
+                        (response-status-code updates-res)))
      (mainloop)]
     [else
      (define updates (hash-ref (response-json updates-res) 'result))
@@ -148,3 +182,5 @@
 
 (info (now) " Started")
 (mainloop 0)
+(kill-thread local-anicca-file-update-worker)
+(disconnect subscription-db)

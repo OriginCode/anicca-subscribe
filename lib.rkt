@@ -6,12 +6,15 @@
 
 (provide (all-defined-out))
 
+(define *pkgsupdate-json-url*
+  "https://raw.githubusercontent.com/AOSC-Dev/anicca/main/pkgsupdate.json")   
+
 (define/contract (online-data)
   (-> jsexpr?)
   (response-json
    (let ([res
           (get
-           "https://raw.githubusercontent.com/AOSC-Dev/anicca/main/pkgsupdate.json")])
+           *pkgsupdate-json-url*)])
      (unless (= (response-status-code res) 200)
        (raise-user-error 'anicca-subscribe "failed to fetch anicca package update list"))
      res)))
